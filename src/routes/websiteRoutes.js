@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-const { getAll, getById, create, update, remove } = require('../controllers/websiteController');
+const { getAll, getBySlug, create, update, remove } = require('../controllers/websiteController');
 
 /**
  * @swagger
@@ -27,18 +27,16 @@ const { getAll, getById, create, update, remove } = require('../controllers/webs
 
 /**
  * @swagger
- * /websites/{id}:
+ * /websites/{slug}:
  *   get:
- *     summary: Detail website by ID
+ *     summary: Detail website by slug
  *     tags: [Websites]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: slug
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Detail website
@@ -99,7 +97,7 @@ const { getAll, getById, create, update, remove } = require('../controllers/webs
 
 /**
  * @swagger
- * /websites/{id}:
+ * /websites/{slug}:
  *   put:
  *     summary: Update website
  *     tags: [Websites]
@@ -107,10 +105,10 @@ const { getAll, getById, create, update, remove } = require('../controllers/webs
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: slug
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -155,7 +153,7 @@ const { getAll, getById, create, update, remove } = require('../controllers/webs
 
 /**
  * @swagger
- * /websites/{id}:
+ * /websites/{slug}:
  *   delete:
  *     summary: Hapus website (soft delete)
  *     tags: [Websites]
@@ -163,10 +161,10 @@ const { getAll, getById, create, update, remove } = require('../controllers/webs
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: slug
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Website berhasil dihapus
@@ -174,12 +172,10 @@ const { getAll, getById, create, update, remove } = require('../controllers/webs
  *         description: Website tidak ditemukan
  */
 
-router.use(authMiddleware);
-
-router.get('/', getAll);
-router.get('/:id', getById);
-router.post('/', create);
-router.put('/:id', update);
-router.delete('/:id', remove);
+router.get('/', authMiddleware, getAll);
+router.get('/:slug', getBySlug);
+router.post('/', authMiddleware, create);
+router.put('/:slug', authMiddleware, update);
+router.delete('/:slug', authMiddleware, remove);
 
 module.exports = router;

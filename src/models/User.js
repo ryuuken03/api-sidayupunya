@@ -21,6 +21,12 @@ const User = sequelize.define('User', {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
     },
+    levelRole: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        field: 'level_role',
+    },
     deletedAt: {
         type: DataTypes.DATE,
         allowNull: true,

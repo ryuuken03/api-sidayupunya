@@ -30,13 +30,13 @@ const getAll = async (req, res, next) => {
 };
 
 /**
- * GET /api/websites/:id
- * Get a single website by ID (must be owned by the user)
+ * GET /api/websites/:slug
+ * Get a single website by slug (public)
  */
-const getById = async (req, res, next) => {
+const getBySlug = async (req, res, next) => {
     try {
         const website = await Website.findOne({
-            where: { id: req.params.id, userId: req.user.id },
+            where: { slug: req.params.slug },
             attributes: ['id', 'slug', 'name', 'phone', 'lat', 'lng', 'address', 'logo', 'url', 'status', 'can_access', 'description', 'subdomain', 'can_expired', 'has_product', 'created_at', 'updated_at'],
         });
 
@@ -110,14 +110,15 @@ const create = async (req, res, next) => {
 };
 
 /**
- * PUT /api/websites/:id
+ * PUT /api/websites/:slug
  * Update a website
  */
 const update = async (req, res, next) => {
     try {
-        const website = await Website.findOne({
-            where: { id: req.params.id, userId: req.user.id },
-        });
+        const where = { slug: req.params.slug };
+        if (req.user.levelRole !== 0) where.userId = req.user.id;
+
+        const website = await Website.findOne({ where });
 
         if (!website) {
             throw new ApiError(404, 'Website tidak ditemukan');
@@ -173,14 +174,15 @@ const update = async (req, res, next) => {
 };
 
 /**
- * DELETE /api/websites/:id
+ * DELETE /api/websites/:slug
  * Soft delete a website
  */
 const remove = async (req, res, next) => {
     try {
-        const website = await Website.findOne({
-            where: { id: req.params.id, userId: req.user.id },
-        });
+        const where = { slug: req.params.slug };
+        if (req.user.levelRole !== 0) where.userId = req.user.id;
+
+        const website = await Website.findOne({ where });
 
         if (!website) {
             throw new ApiError(404, 'Website tidak ditemukan');
@@ -194,4 +196,4 @@ const remove = async (req, res, next) => {
     }
 };
 
-module.exports = { getAll, getById, create, update, remove };
+module.exports = { getAll, getBySlug, create, update, remove };

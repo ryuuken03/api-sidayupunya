@@ -13,6 +13,7 @@ const generateToken = (user) => {
         id: user.id,
         username: user.username,
         status: user.status,
+        levelRole: user.levelRole,
     };
 
     return jwt.sign(payload, config.jwt.secret, {
@@ -25,6 +26,11 @@ const generateToken = (user) => {
  */
 const register = async (req, res, next) => {
     try {
+        // Hanya user dengan level_role = 0 yang bisa register user baru
+        if (req.user.levelRole !== 0) {
+            throw new ApiError(403, 'Hanya admin yang dapat menambahkan user baru');
+        }
+
         const { username, password } = req.body;
 
         if (!username || !password) {
@@ -47,13 +53,12 @@ const register = async (req, res, next) => {
             status: true,
         });
 
-        const token = generateToken(user);
-
         apiResponse.success(res, {
+            id: user.id,
             username: user.username,
             status: user.status,
-            token,
-        }, 'Registrasi berhasil', 201);
+            levelRole: user.levelRole,
+        }, 'User berhasil ditambahkan', 201);
     } catch (err) {
         next(err);
     }

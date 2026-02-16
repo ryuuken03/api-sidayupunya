@@ -1,29 +1,27 @@
 const express = require('express');
-const router = express.Router({ mergeParams: true });
+const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-const { getAll, getById, create, update, remove } = require('../controllers/productController');
+const { getAll, getBySlug, create, update, remove } = require('../controllers/productController');
 
 /**
  * @swagger
  * tags:
  *   name: Products
- *   description: CRUD Produk (nested di bawah website, perlu autentikasi)
+ *   description: CRUD Produk (perlu autentikasi)
  */
 
 /**
  * @swagger
- * /websites/{websiteId}/products:
+ * /websites/{websiteSlug}/products:
  *   get:
  *     summary: Daftar semua produk di website
  *     tags: [Products]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: websiteId
+ *         name: websiteSlug
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Daftar produk
@@ -33,23 +31,16 @@ const { getAll, getById, create, update, remove } = require('../controllers/prod
 
 /**
  * @swagger
- * /websites/{websiteId}/products/{id}:
+ * /products/{slug}:
  *   get:
- *     summary: Detail produk by ID
+ *     summary: Detail produk by slug
  *     tags: [Products]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: websiteId
+ *         name: slug
  *         required: true
  *         schema:
- *           type: integer
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Detail produk
@@ -59,29 +50,26 @@ const { getAll, getById, create, update, remove } = require('../controllers/prod
 
 /**
  * @swagger
- * /websites/{websiteId}/products:
+ * /products:
  *   post:
  *     summary: Buat produk baru
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: websiteId
- *         required: true
- *         schema:
- *           type: integer
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name]
+ *             required: [name, websiteId]
  *             properties:
  *               name:
  *                 type: string
  *                 example: Es Teh Jumbo
+ *               websiteId:
+ *                 type: integer
+ *                 example: 1
  *               description:
  *                 type: string
  *                 example: Teh segar ukuran jumbo
@@ -102,13 +90,13 @@ const { getAll, getById, create, update, remove } = require('../controllers/prod
  *         description: Produk berhasil dibuat
  *       400:
  *         description: Validasi gagal
- *       404:
- *         description: Website tidak ditemukan
+ *       409:
+ *         description: Slug sudah digunakan
  */
 
 /**
  * @swagger
- * /websites/{websiteId}/products/{id}:
+ * /products/{slug}:
  *   put:
  *     summary: Update produk
  *     tags: [Products]
@@ -116,15 +104,10 @@ const { getAll, getById, create, update, remove } = require('../controllers/prod
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: websiteId
+ *         name: slug
  *         required: true
  *         schema:
- *           type: integer
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -155,7 +138,7 @@ const { getAll, getById, create, update, remove } = require('../controllers/prod
 
 /**
  * @swagger
- * /websites/{websiteId}/products/{id}:
+ * /products/{slug}:
  *   delete:
  *     summary: Hapus produk (soft delete)
  *     tags: [Products]
@@ -163,15 +146,10 @@ const { getAll, getById, create, update, remove } = require('../controllers/prod
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: websiteId
+ *         name: slug
  *         required: true
  *         schema:
- *           type: integer
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Produk berhasil dihapus
@@ -179,12 +157,13 @@ const { getAll, getById, create, update, remove } = require('../controllers/prod
  *         description: Produk tidak ditemukan
  */
 
-router.use(authMiddleware);
+// Public
+router.get('/:slug', getBySlug);
 
-router.get('/', getAll);
-router.get('/:id', getById);
-router.post('/', create);
-router.put('/:id', update);
-router.delete('/:id', remove);
+// Auth required
+router.post('/', authMiddleware, create);
+router.put('/:slug', authMiddleware, update);
+router.delete('/:slug', authMiddleware, remove);
 
-module.exports = router;
+// Mounted separately in index.js: GET /api/websites/:websiteSlug/products
+module.exports = { router, getAll };

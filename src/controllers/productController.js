@@ -13,25 +13,44 @@ const generateSlug = (name) => {
 };
 
 /**
- * Verify website belongs to user
+ * Verify product belongs to user (via website), admin bypass
  */
-const verifyWebsite = async (websiteId, userId) => {
-    const website = await Website.findOne({ where: { id: websiteId, userId } });
-    if (!website) {
-        throw new ApiError(404, 'Website tidak ditemukan');
+const verifyProductOwnership = async (productSlug, userId, levelRole) => {
+    const product = await Product.findOne({
+        where: { slug: productSlug },
+        include: [{
+            model: Website,
+            as: 'website',
+            attributes: ['id', 'slug', 'userId'],
+        }],
+    });
+
+    if (!product) {
+        throw new ApiError(404, 'Produk tidak ditemukan');
     }
-    return website;
+
+    if (levelRole !== 0 && product.website.userId !== userId) {
+        throw new ApiError(403, 'Anda tidak memiliki akses ke produk ini');
+    }
+
+    return product;
 };
 
 /**
- * GET /api/websites/:websiteId/products
+ * GET /api/websites/:websiteSlug/products (public)
  */
 const getAll = async (req, res, next) => {
     try {
-        await verifyWebsite(req.params.websiteId, req.user.id);
+        const website = await Website.findOne({
+            where: { slug: req.params.websiteSlug },
+        });
+
+        if (!website) {
+            throw new ApiError(404, 'Website tidak ditemukan');
+        }
 
         const products = await Product.findAll({
-            where: { websiteId: req.params.websiteId },
+            where: { websiteId: website.id },
         });
 
         apiResponse.success(res, products, 'Daftar produk');
@@ -41,14 +60,17 @@ const getAll = async (req, res, next) => {
 };
 
 /**
- * GET /api/websites/:websiteId/products/:id
+ * GET /api/products/:slug (public)
  */
-const getById = async (req, res, next) => {
+const getBySlug = async (req, res, next) => {
     try {
-        await verifyWebsite(req.params.websiteId, req.user.id);
-
         const product = await Product.findOne({
-            where: { id: req.params.id, websiteId: req.params.websiteId },
+            where: { slug: req.params.slug },
+            include: [{
+                model: Website,
+                as: 'website',
+                attributes: ['id', 'slug', 'name'],
+            }],
         });
 
         if (!product) {
@@ -62,19 +84,35 @@ const getById = async (req, res, next) => {
 };
 
 /**
- * POST /api/websites/:websiteId/products
+ * POST /api/products
  */
 const create = async (req, res, next) => {
     try {
-        await verifyWebsite(req.params.websiteId, req.user.id);
-
-        const { name, description, price, discountPercent, discountAmount, hasStock } = req.body;
+        const { name, description, price, discountPercent, discountAmount, hasStock, websiteId } = req.body;
 
         if (!name) {
             throw new ApiError(400, 'Nama produk wajib diisi');
         }
 
+        if (!websiteId) {
+            throw new ApiError(400, 'Website ID wajib diisi');
+        }
+
+        // Verify website belongs to user (admin bypass)
+        const whereWebsite = { id: websiteId };
+        if (req.user.levelRole !== 0) whereWebsite.userId = req.user.id;
+
+        const website = await Website.findOne({ where: whereWebsite });
+        if (!website) {
+            throw new ApiError(404, 'Website tidak ditemukan');
+        }
+
         const slug = generateSlug(name);
+
+        const existingSlug = await Product.findOne({ where: { slug } });
+        if (existingSlug) {
+            throw new ApiError(409, 'Slug produk sudah digunakan, gunakan nama lain');
+        }
 
         const product = await Product.create({
             slug,
@@ -84,7 +122,7 @@ const create = async (req, res, next) => {
             discountPercent: discountPercent || null,
             discountAmount: discountAmount || null,
             hasStock: hasStock !== undefined ? hasStock : true,
-            websiteId: req.params.websiteId,
+            websiteId: website.id,
             status: true,
         });
 
@@ -95,24 +133,21 @@ const create = async (req, res, next) => {
 };
 
 /**
- * PUT /api/websites/:websiteId/products/:id
+ * PUT /api/products/:slug
  */
 const update = async (req, res, next) => {
     try {
-        await verifyWebsite(req.params.websiteId, req.user.id);
-
-        const product = await Product.findOne({
-            where: { id: req.params.id, websiteId: req.params.websiteId },
-        });
-
-        if (!product) {
-            throw new ApiError(404, 'Produk tidak ditemukan');
-        }
+        const product = await verifyProductOwnership(req.params.slug, req.user.id, req.user.levelRole);
 
         const { name, description, price, discountPercent, discountAmount, hasStock, status } = req.body;
 
         if (name && name !== product.name) {
-            product.slug = generateSlug(name);
+            const newSlug = generateSlug(name);
+            const existingSlug = await Product.findOne({ where: { slug: newSlug } });
+            if (existingSlug && existingSlug.id !== product.id) {
+                throw new ApiError(409, 'Slug produk sudah digunakan, gunakan nama lain');
+            }
+            product.slug = newSlug;
             product.name = name;
         }
 
@@ -132,19 +167,11 @@ const update = async (req, res, next) => {
 };
 
 /**
- * DELETE /api/websites/:websiteId/products/:id
+ * DELETE /api/products/:slug
  */
 const remove = async (req, res, next) => {
     try {
-        await verifyWebsite(req.params.websiteId, req.user.id);
-
-        const product = await Product.findOne({
-            where: { id: req.params.id, websiteId: req.params.websiteId },
-        });
-
-        if (!product) {
-            throw new ApiError(404, 'Produk tidak ditemukan');
-        }
+        const product = await verifyProductOwnership(req.params.slug, req.user.id, req.user.levelRole);
 
         await product.destroy();
 
@@ -154,4 +181,4 @@ const remove = async (req, res, next) => {
     }
 };
 
-module.exports = { getAll, getById, create, update, remove };
+module.exports = { getAll, getBySlug, create, update, remove };

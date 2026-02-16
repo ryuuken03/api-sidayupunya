@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { register, login } = require('../controllers/authController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -15,6 +16,8 @@ const { register, login } = require('../controllers/authController');
  *   post:
  *     summary: Register user baru
  *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -58,7 +61,7 @@ const { register, login } = require('../controllers/authController');
  *       409:
  *         description: Username sudah digunakan
  */
-router.post('/register', register);
+router.post('/register', authMiddleware, register);
 
 /**
  * @swagger
