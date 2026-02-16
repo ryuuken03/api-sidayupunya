@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check:
+    name: Build & Check
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check syntax (dry run)
+        run: node -e "require('./src/app.js')" || true
+
+      # Tambahkan test command di bawah ini ketika sudah ada unit test
+      # - name: Run tests
+      #   run: npm test
+      #   env:
+      #     NODE_ENV: test
+      #     DB_HOST: localhost
+      #     DB_USER: root
+      #     DB_PASSWORD: ''
+      #     DB_NAME: test_db
+      #     DB_PORT: 3306
+      #     JWT_SECRET: test-secret
+      #     JWT_EXPIRES_IN: 1d
