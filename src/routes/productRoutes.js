@@ -1,13 +1,28 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-const { getAll, getBySlug, create, update, remove } = require('../controllers/productController');
+const { getAll, getAllForAdmin, getBySlug, create, update, remove } = require('../controllers/productController');
 
 /**
  * @swagger
  * tags:
  *   name: Products
  *   description: CRUD Produk (perlu autentikasi)
+ */
+
+/**
+ * @swagger
+ * /products:
+ *   get:
+ *     summary: Daftar semua produk (Admin only)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Daftar semua produk
+ *       403:
+ *         description: Forbidden - Hanya admin
  */
 
 /**
@@ -161,6 +176,7 @@ const { getAll, getBySlug, create, update, remove } = require('../controllers/pr
 router.get('/:slug', getBySlug);
 
 // Auth required
+router.get('/', authMiddleware, getAllForAdmin);
 router.post('/', authMiddleware, create);
 router.put('/:slug', authMiddleware, update);
 router.delete('/:slug', authMiddleware, remove);

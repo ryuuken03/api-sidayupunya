@@ -22,49 +22,6 @@ const generateToken = (user) => {
 };
 
 /**
- * POST /api/auth/register
- */
-const register = async (req, res, next) => {
-    try {
-        // Hanya user dengan level_role = 0 yang bisa register user baru
-        if (req.user.levelRole !== 0) {
-            throw new ApiError(403, 'Hanya admin yang dapat menambahkan user baru');
-        }
-
-        const { username, password } = req.body;
-
-        if (!username || !password) {
-            throw new ApiError(400, 'Username dan password wajib diisi');
-        }
-
-        if (password.length < 6) {
-            throw new ApiError(400, 'Password minimal 6 karakter');
-        }
-
-        const existingUser = await User.findOne({ where: { username } });
-        if (existingUser) {
-            throw new ApiError(409, 'Username sudah digunakan');
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({
-            username,
-            password: hashedPassword,
-            status: true,
-        });
-
-        apiResponse.success(res, {
-            id: user.id,
-            username: user.username,
-            status: user.status,
-            levelRole: user.levelRole,
-        }, 'User berhasil ditambahkan', 201);
-    } catch (err) {
-        next(err);
-    }
-};
-
-/**
  * POST /api/auth/login
  */
 const login = async (req, res, next) => {
@@ -94,6 +51,7 @@ const login = async (req, res, next) => {
         apiResponse.success(res, {
             username: user.username,
             status: user.status,
+            level_role: user.levelRole,
             token,
         }, 'Login berhasil');
     } catch (err) {
@@ -101,4 +59,4 @@ const login = async (req, res, next) => {
     }
 };
 
-module.exports = { register, login };
+module.exports = { login };

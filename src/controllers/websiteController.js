@@ -18,8 +18,14 @@ const generateSlug = (name) => {
  */
 const getAll = async (req, res, next) => {
     try {
+        const where = {};
+        // Jika bukan admin (levelRole !== 0), hanya tampilkan milik user sendiri
+        if (req.user.levelRole !== 0) {
+            where.userId = req.user.id;
+        }
+
         const websites = await Website.findAll({
-            where: { userId: req.user.id },
+            where,
             attributes: ['id', 'slug', 'name', 'phone', 'lat', 'lng', 'address', 'logo', 'url', 'status', 'can_access', 'description', 'subdomain', 'can_expired', 'has_product', 'created_at', 'updated_at'],
         });
 

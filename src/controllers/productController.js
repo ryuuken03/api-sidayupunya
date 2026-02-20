@@ -39,6 +39,36 @@ const verifyProductOwnership = async (productSlug, userId, levelRole) => {
 /**
  * GET /api/websites/:websiteSlug/products (public)
  */
+
+
+/**
+ * GET /api/products
+ * List all products (Admin only)
+ */
+const getAllForAdmin = async (req, res, next) => {
+    try {
+        if (req.user.levelRole !== 0) {
+            throw new ApiError(403, 'Hanya admin yang dapat melihat semua produk');
+        }
+
+        const products = await Product.findAll({
+            include: [{
+                model: Website,
+                as: 'website',
+                attributes: ['id', 'slug', 'name'],
+            }],
+            order: [['created_at', 'DESC']],
+        });
+
+        apiResponse.success(res, products, 'Daftar semua produk');
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * GET /api/websites/:websiteSlug/products (public)
+ */
 const getAll = async (req, res, next) => {
     try {
         const website = await Website.findOne({
@@ -181,4 +211,4 @@ const remove = async (req, res, next) => {
     }
 };
 
-module.exports = { getAll, getBySlug, create, update, remove };
+module.exports = { getAll, getAllForAdmin, getBySlug, create, update, remove };
