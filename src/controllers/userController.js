@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, Website } = require('../models');
 const bcrypt = require('bcryptjs');
 const apiResponse = require('../utils/apiResponse');
 const { ApiError } = require('../middlewares/errorHandler');
@@ -16,6 +16,13 @@ const getUsers = async (req, res, next) => {
 
         const users = await User.findAll({
             attributes: ['id', 'username', 'status', 'level_role', 'created_at', 'updated_at'],
+            include: [
+                {
+                    model: Website,
+                    as: 'websites',
+                    attributes: ['id', 'name', 'slug', 'url', 'logo', 'status'],
+                }
+            ]
         });
 
         apiResponse.success(res, users, 'Berhasil mengambil daftar user');
@@ -37,6 +44,13 @@ const getUserById = async (req, res, next) => {
         const { id } = req.params;
         const user = await User.findByPk(id, {
             attributes: ['id', 'username', 'status', 'level_role', 'created_at', 'updated_at'],
+            include: [
+                {
+                    model: Website,
+                    as: 'websites',
+                    attributes: ['id', 'name', 'slug', 'url', 'logo', 'status'],
+                }
+            ]
         });
 
         if (!user) {

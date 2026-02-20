@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
+const upload = require('../middlewares/uploadMiddleware');
 const { getAll, getBySlug, create, update, remove } = require('../controllers/websiteController');
 
 /**
@@ -174,8 +175,8 @@ const { getAll, getBySlug, create, update, remove } = require('../controllers/we
 
 router.get('/', authMiddleware, getAll);
 router.get('/:slug', getBySlug);
-router.post('/', authMiddleware, create);
-router.put('/:slug', authMiddleware, update);
+router.post('/', authMiddleware, upload.single('logo'), create);
+router.put('/:slug', authMiddleware, upload.single('logo'), update);
 router.delete('/:slug', authMiddleware, remove);
 
 module.exports = router;

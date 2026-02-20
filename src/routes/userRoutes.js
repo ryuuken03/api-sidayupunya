@@ -51,6 +51,23 @@ const authMiddleware = require('../middlewares/authMiddleware');
  *                       updated_at:
  *                         type: string
  *                         format: date-time
+ *                       websites:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: integer
+ *                             name:
+ *                               type: string
+ *                             slug:
+ *                               type: string
+ *                             url:
+ *                               type: string
+ *                             logo:
+ *                               type: string
+ *                             status:
+ *                               type: boolean
  *       401:
  *         description: Unauthorized
  *       403:
@@ -140,6 +157,23 @@ router.post('/', authMiddleware, createUser);
  *                     updated_at:
  *                       type: string
  *                       format: date-time
+ *                     websites:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                           slug:
+ *                             type: string
+ *                           url:
+ *                             type: string
+ *                           logo:
+ *                             type: string
+ *                           status:
+ *                             type: boolean
  *       404:
  *         description: User tidak ditemukan
  *       403:

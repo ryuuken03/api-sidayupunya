@@ -62,7 +62,12 @@ const getBySlug = async (req, res, next) => {
  */
 const create = async (req, res, next) => {
     try {
-        const { name, phone, lat, lng, address, logo, url, description, subdomain } = req.body;
+        const { name, phone, lat, lng, address, url, description, subdomain } = req.body;
+        let logo = req.body.logo;
+
+        if (req.file) {
+            logo = `${req.protocol}://${req.get('host')}/public/uploads/logos/${req.file.filename}`;
+        }
 
         if (!name || !url) {
             throw new ApiError(400, 'Nama website dan URL wajib diisi');
@@ -130,7 +135,12 @@ const update = async (req, res, next) => {
             throw new ApiError(404, 'Website tidak ditemukan');
         }
 
-        const { name, phone, lat, lng, address, logo, url, status, canAccess, description, subdomain, canExpired, hasProduct } = req.body;
+        const { name, phone, lat, lng, address, url, status, canAccess, description, subdomain, canExpired, hasProduct } = req.body;
+        let logo = req.body.logo;
+
+        if (req.file) {
+            logo = `${req.protocol}://${req.get('host')}/public/uploads/logos/${req.file.filename}`;
+        }
 
         // Re-generate slug if name changed
         if (name && name !== website.name) {
