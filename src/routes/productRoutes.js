@@ -37,6 +37,18 @@ const { getAll, getAllForAdmin, getBySlug, create, update, remove } = require('.
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Nomor halaman
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Jumlah item per halaman
  *     responses:
  *       200:
  *         description: Daftar produk
@@ -172,13 +184,15 @@ const { getAll, getAllForAdmin, getBySlug, create, update, remove } = require('.
  *         description: Produk tidak ditemukan
  */
 
+const upload = require('../middlewares/uploadMiddleware');
+
 // Public
 router.get('/:slug', getBySlug);
 
 // Auth required
 router.get('/', authMiddleware, getAllForAdmin);
-router.post('/', authMiddleware, create);
-router.put('/:slug', authMiddleware, update);
+router.post('/:websiteSlug', authMiddleware, upload.single('image'), create);
+router.put('/:websiteSlug/:slug', authMiddleware, upload.single('image'), update);
 router.delete('/:slug', authMiddleware, remove);
 
 // Mounted separately in index.js: GET /api/websites/:websiteSlug/products

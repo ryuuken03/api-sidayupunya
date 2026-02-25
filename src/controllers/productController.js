@@ -1,6 +1,8 @@
 const { Website, Product } = require('../models');
 const apiResponse = require('../utils/apiResponse');
 const { ApiError } = require('../middlewares/errorHandler');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Generate slug from name
@@ -51,16 +53,29 @@ const getAllForAdmin = async (req, res, next) => {
             throw new ApiError(403, 'Hanya admin yang dapat melihat semua produk');
         }
 
-        const products = await Product.findAll({
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+
+        const { count, rows: products } = await Product.findAndCountAll({
+            limit,
+            offset,
             include: [{
                 model: Website,
                 as: 'website',
-                attributes: ['id', 'slug', 'name'],
+                attributes: ['id', 'slug', 'name', 'logo'],
             }],
             order: [['created_at', 'DESC']],
         });
 
-        apiResponse.success(res, products, 'Daftar semua produk');
+        const pagination = {
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            limit: limit
+        };
+
+        apiResponse.success(res, { products, pagination }, 'Daftar semua produk');
     } catch (err) {
         next(err);
     }
@@ -71,6 +86,10 @@ const getAllForAdmin = async (req, res, next) => {
  */
 const getAll = async (req, res, next) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+
         const website = await Website.findOne({
             where: { slug: req.params.websiteSlug },
         });
@@ -79,11 +98,25 @@ const getAll = async (req, res, next) => {
             throw new ApiError(404, 'Website tidak ditemukan');
         }
 
-        const products = await Product.findAll({
+        const { count, rows: products } = await Product.findAndCountAll({
             where: { websiteId: website.id },
+            limit,
+            offset,
+            include: [{
+                model: Website,
+                as: 'website',
+                attributes: ['id', 'slug', 'name', 'logo'],
+            }],
         });
 
-        apiResponse.success(res, products, 'Daftar produk');
+        const pagination = {
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            limit: limit
+        };
+
+        apiResponse.success(res, { products, pagination }, 'Daftar produk');
     } catch (err) {
         next(err);
     }
@@ -99,7 +132,7 @@ const getBySlug = async (req, res, next) => {
             include: [{
                 model: Website,
                 as: 'website',
-                attributes: ['id', 'slug', 'name'],
+                attributes: ['id', 'slug', 'name', 'logo'],
             }],
         });
 
@@ -119,17 +152,18 @@ const getBySlug = async (req, res, next) => {
 const create = async (req, res, next) => {
     try {
         const { name, description, price, discountPercent, discountAmount, hasStock, websiteId } = req.body;
+        let image = req.body.image;
+
+        if (req.file) {
+            image = `${req.protocol}://${req.get('host')}/public/uploads/products/${req.params.websiteSlug}/${req.file.filename}`;
+        }
 
         if (!name) {
             throw new ApiError(400, 'Nama produk wajib diisi');
         }
 
-        if (!websiteId) {
-            throw new ApiError(400, 'Website ID wajib diisi');
-        }
-
         // Verify website belongs to user (admin bypass)
-        const whereWebsite = { id: websiteId };
+        const whereWebsite = { slug: req.params.websiteSlug };
         if (req.user.levelRole !== 0) whereWebsite.userId = req.user.id;
 
         const website = await Website.findOne({ where: whereWebsite });
@@ -152,6 +186,7 @@ const create = async (req, res, next) => {
             discountPercent: discountPercent || null,
             discountAmount: discountAmount || null,
             hasStock: hasStock !== undefined ? hasStock : true,
+            image: image || null,
             websiteId: website.id,
             status: true,
         });
@@ -169,10 +204,16 @@ const update = async (req, res, next) => {
     try {
         const product = await verifyProductOwnership(req.params.slug, req.user.id, req.user.levelRole);
 
-        const { name, description, price, discountPercent, discountAmount, hasStock, status } = req.body;
+        const { name, description, price, discountPercent, discountAmount, hasStock, status, websiteId } = req.body;
+        let image = req.body.image;
 
+        if (req.file) {
+            image = `${req.protocol}://${req.get('host')}/public/uploads/products/${req.params.websiteSlug}/${req.file.filename}`;
+        }
+
+        let newSlug = product.slug;
         if (name && name !== product.name) {
-            const newSlug = generateSlug(name);
+            newSlug = generateSlug(name);
             const existingSlug = await Product.findOne({ where: { slug: newSlug } });
             if (existingSlug && existingSlug.id !== product.id) {
                 throw new ApiError(409, 'Slug produk sudah digunakan, gunakan nama lain');
@@ -186,6 +227,7 @@ const update = async (req, res, next) => {
         if (discountPercent !== undefined) product.discountPercent = discountPercent;
         if (discountAmount !== undefined) product.discountAmount = discountAmount;
         if (hasStock !== undefined) product.hasStock = hasStock;
+        if (image !== undefined) product.image = image;
         if (status !== undefined) product.status = status;
 
         await product.save();

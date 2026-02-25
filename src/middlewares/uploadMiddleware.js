@@ -4,7 +4,16 @@ const fs = require('fs');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadPath = path.join(__dirname, '../../public/uploads/logos');
+        let uploadPath;
+        if (file.fieldname === 'logo') {
+            uploadPath = path.join(__dirname, '../../public/uploads/logos');
+        } else if (file.fieldname === 'image') {
+            const websiteSlug = req.params.websiteSlug || 'default';
+            uploadPath = path.join(__dirname, `../../public/uploads/products/${websiteSlug}`);
+        } else {
+            uploadPath = path.join(__dirname, '../../public/uploads');
+        }
+
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
         }

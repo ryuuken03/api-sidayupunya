@@ -18,18 +18,31 @@ const generateSlug = (name) => {
  */
 const getAll = async (req, res, next) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+
         const where = {};
         // Jika bukan admin (levelRole !== 0), hanya tampilkan milik user sendiri
         if (req.user.levelRole !== 0) {
             where.userId = req.user.id;
         }
 
-        const websites = await Website.findAll({
+        const { count, rows: websites } = await Website.findAndCountAll({
             where,
+            limit,
+            offset,
             attributes: ['id', 'slug', 'name', 'phone', 'lat', 'lng', 'address', 'logo', 'url', 'status', 'can_access', 'description', 'subdomain', 'can_expired', 'has_product', 'created_at', 'updated_at'],
         });
 
-        apiResponse.success(res, websites, 'Daftar website');
+        const pagination = {
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            limit: limit
+        };
+
+        apiResponse.success(res, { websites, pagination }, 'Daftar website');
     } catch (err) {
         next(err);
     }

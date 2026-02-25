@@ -14,7 +14,13 @@ const getUsers = async (req, res, next) => {
             throw new ApiError(403, 'Akses ditolak. Hanya admin yang bisa melihat daftar user.');
         }
 
-        const users = await User.findAll({
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+
+        const { count, rows: users } = await User.findAndCountAll({
+            limit,
+            offset,
             attributes: ['id', 'username', 'status', 'level_role', 'created_at', 'updated_at'],
             include: [
                 {
@@ -25,7 +31,14 @@ const getUsers = async (req, res, next) => {
             ]
         });
 
-        apiResponse.success(res, users, 'Berhasil mengambil daftar user');
+        const pagination = {
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            limit: limit
+        };
+
+        apiResponse.success(res, { users, pagination }, 'Berhasil mengambil daftar user');
     } catch (err) {
         next(err);
     }

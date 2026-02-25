@@ -37,6 +37,10 @@ const Product = sequelize.define('Product', {
         defaultValue: null,
         field: 'discount_amount',
     },
+    image: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+    },
     hasStock: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

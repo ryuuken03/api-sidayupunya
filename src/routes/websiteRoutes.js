@@ -19,6 +19,19 @@ const { getAll, getBySlug, create, update, remove } = require('../controllers/we
  *     tags: [Websites]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Nomor halaman
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Jumlah item per halaman
  *     responses:
  *       200:
  *         description: Daftar website

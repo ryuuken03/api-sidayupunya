@@ -18,6 +18,19 @@ const authMiddleware = require('../middlewares/authMiddleware');
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Nomor halaman
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Jumlah item per halaman
  *     responses:
  *       200:
  *         description: Berhasil mendapatkan daftar user
