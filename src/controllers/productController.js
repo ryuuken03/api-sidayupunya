@@ -1,4 +1,4 @@
-const { Website, Product } = require('../models');
+const { Website, Product, ProductCategory, ProductCategoryMap } = require('../models');
 const apiResponse = require('../utils/apiResponse');
 const { ApiError } = require('../middlewares/errorHandler');
 const fs = require('fs');
@@ -13,6 +13,30 @@ const generateSlug = (name) => {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
 };
+
+/**
+ * Extract category IDs from string, array, or array of objects
+ */
+const extractCategoryIds = (categories) => {
+    let categoryArray = categories;
+    if (typeof categoryArray === 'string') {
+        try {
+            categoryArray = JSON.parse(categoryArray);
+        } catch (e) {
+            // Treat as regular string
+        }
+    }
+    if (!Array.isArray(categoryArray)) {
+        categoryArray = [categoryArray];
+    }
+    return categoryArray.map(item => {
+        if (typeof item === 'object' && item !== null && item.id !== undefined) {
+            return parseInt(item.id, 10);
+        }
+        return parseInt(item, 10);
+    }).filter(id => !isNaN(id));
+};
+
 
 /**
  * Verify product belongs to user (via website), admin bypass
@@ -60,11 +84,19 @@ const getAllForAdmin = async (req, res, next) => {
         const { count, rows: products } = await Product.findAndCountAll({
             limit,
             offset,
-            include: [{
-                model: Website,
-                as: 'website',
-                attributes: ['id', 'slug', 'name', 'logo'],
-            }],
+            include: [
+                {
+                    model: Website,
+                    as: 'website',
+                    attributes: ['id', 'slug', 'name', 'logo'],
+                },
+                {
+                    model: ProductCategory,
+                    as: 'categories',
+                    attributes: ['id', 'name', 'slug'],
+                    through: { attributes: [] }
+                }
+            ],
             order: [['created_at', 'DESC']],
         });
 
@@ -102,11 +134,19 @@ const getAll = async (req, res, next) => {
             where: { websiteId: website.id },
             limit,
             offset,
-            include: [{
-                model: Website,
-                as: 'website',
-                attributes: ['id', 'slug', 'name', 'logo'],
-            }],
+            include: [
+                {
+                    model: Website,
+                    as: 'website',
+                    attributes: ['id', 'slug', 'name', 'logo'],
+                },
+                {
+                    model: ProductCategory,
+                    as: 'categories',
+                    attributes: ['id', 'name', 'slug'],
+                    through: { attributes: [] }
+                }
+            ],
         });
 
         const pagination = {
@@ -129,11 +169,19 @@ const getBySlug = async (req, res, next) => {
     try {
         const product = await Product.findOne({
             where: { slug: req.params.slug },
-            include: [{
-                model: Website,
-                as: 'website',
-                attributes: ['id', 'slug', 'name', 'logo'],
-            }],
+            include: [
+                {
+                    model: Website,
+                    as: 'website',
+                    attributes: ['id', 'slug', 'name', 'logo'],
+                },
+                {
+                    model: ProductCategory,
+                    as: 'categories',
+                    attributes: ['id', 'name', 'slug'],
+                    through: { attributes: [] }
+                }
+            ],
         });
 
         if (!product) {
@@ -191,6 +239,19 @@ const create = async (req, res, next) => {
             status: true,
         });
 
+        if (req.body.categories !== undefined) {
+
+            const categoryIds = extractCategoryIds(req.body.categories);
+
+            if (categoryIds.length > 0) {
+                const categoryMaps = categoryIds.map(id => ({
+                    idProduct: product.id,
+                    idProductCategory: id
+                }));
+                await ProductCategoryMap.bulkCreate(categoryMaps);
+            }
+        }
+
         apiResponse.success(res, product, 'Produk berhasil dibuat', 201);
     } catch (err) {
         next(err);
@@ -231,6 +292,41 @@ const update = async (req, res, next) => {
         if (status !== undefined) product.status = status;
 
         await product.save();
+
+        if (req.body.categories !== undefined) {
+            const categoryIds = extractCategoryIds(req.body.categories);
+
+            if (categoryIds.length === 0) {
+                await ProductCategoryMap.destroy({
+                    where: { idProduct: product.id }
+                });
+            } else {
+                const existingMaps = await ProductCategoryMap.findAll({
+                    where: { idProduct: product.id }
+                });
+                const existingCategoryIds = existingMaps.map(map => map.idProductCategory);
+
+                const categoriesToAdd = categoryIds.filter(id => !existingCategoryIds.includes(id));
+                const categoriesToRemove = existingCategoryIds.filter(id => !categoryIds.includes(id));
+
+                if (categoriesToRemove.length > 0) {
+                    await ProductCategoryMap.destroy({
+                        where: {
+                            idProduct: product.id,
+                            idProductCategory: categoriesToRemove
+                        }
+                    });
+                }
+
+                if (categoriesToAdd.length > 0) {
+                    const mapsToAdd = categoriesToAdd.map(id => ({
+                        idProduct: product.id,
+                        idProductCategory: id
+                    }));
+                    await ProductCategoryMap.bulkCreate(mapsToAdd);
+                }
+            }
+        }
 
         apiResponse.success(res, product, 'Produk berhasil diperbarui');
     } catch (err) {
