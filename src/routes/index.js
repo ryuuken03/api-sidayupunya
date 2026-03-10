@@ -6,6 +6,7 @@ const websiteRoutes = require('./websiteRoutes');
 const { router: productRoutes, getAll: getProductsByWebsite } = require('./productRoutes');
 const analyticRoutes = require('./analyticRoutes');
 const userRoutes = require('./userRoutes');
+const productCategoryRoutes = require('./productCategoryRoutes');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 // Mount routes
@@ -14,6 +15,7 @@ router.use('/websites', websiteRoutes);
 router.use('/products', productRoutes);
 router.use('/analytics', analyticRoutes);
 router.use('/users', userRoutes);
+router.use('/product-categories', productCategoryRoutes);
 
 // Nested: GET /api/websites/:websiteSlug/products (public)
 router.get('/websites/:websiteSlug/products', getProductsByWebsite);
